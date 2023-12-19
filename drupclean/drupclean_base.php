@@ -7,6 +7,22 @@ function sayHello()
 	echo "Hello world\n";
 }
 
+function createDummyTablesForDev($max = 1000)
+{
+	// Get the default database connection.
+	$database = \Drupal::database();
+
+	$tables = [];
+	for($i = 1; $i <= $max; $i++) {
+		$tableName = "tmp_" . substr(uniqid(), 0, 6) . "group_" . uniqid() . uniqid();
+		$tables[] = $tableName;
+		$query ="create table " . $tableName . " (".uniqid() . " varchar(10))";
+		$database->query($query);
+	}
+
+	return storeDrupcleanReport($tables);
+}
+
 function locateNukeableTables() 
 {
 	$nukeables = [];
