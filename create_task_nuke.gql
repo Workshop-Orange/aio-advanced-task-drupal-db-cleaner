@@ -1,0 +1,27 @@
+mutation addMigrationTask {
+    addAdvancedTaskDefinition(input: {
+    name: "Drupclean: Nuke - BEWARE",
+    description: "Run a Drupclean nuke on matching tables",
+    image: "workshoporange/aio-advanced-task-drupal-db-cleaner:nuke-latest",
+    type: IMAGE,
+    permission: MAINTAINER,
+    deployTokenInjection: true,
+    projectKeyInjection: true,
+    project: <ENTER A PROJECT ID HERE>,
+    confirmationText: "You are about to execute an irreversible action. Make sure you are certain.",
+    advancedTaskDefinitionArguments: [
+      {
+        name: "DRUPCLEAN_NUKE_CONFIRM",
+        displayName: "This is irreversible. Type the following all in capitals as displayed: I UNDERSTAND",
+        type: STRING,
+        optional: false,
+      }                 
+    ]
+      })
+  {
+  ... on AdvancedTaskDefinitionImage {
+    id
+    name
+   }
+ }
+}

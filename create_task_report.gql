@@ -1,0 +1,18 @@
+mutation addMigrationTask {
+    addAdvancedTaskDefinition(input: {
+    name: "Drupclean: Report",
+    description: "Run a Drupclean report for tables that Drupclean thinks can be removed",
+    image: "workshoporange/aio-advanced-task-drupal-db-cleaner:report-latest",
+    type: IMAGE,
+    permission: DEVELOPER,
+    deployTokenInjection: true,
+    projectKeyInjection: true,
+    project: <ENTER A PROJECT ID HERE>,
+      })
+  {
+  ... on AdvancedTaskDefinitionImage {
+    id
+    name
+   }
+ }
+}
