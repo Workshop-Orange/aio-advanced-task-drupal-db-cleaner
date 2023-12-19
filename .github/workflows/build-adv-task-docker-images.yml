@@ -18,9 +18,24 @@ jobs:
       with:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_PASSWORD }}
+
+    - name: Build and Push Docker Image
+      uses: docker/build-push-action@v2
+      with:
+        file: drupclean_report.dockerfile
+        push: true
+        tags: workshoporange/aio-advanced-task-drupal-db-cleaner:report-latest 
+
+    - name: Build and Push Docker Image
+      uses: docker/build-push-action@v2
+      with:
+        file: drupclean_nuke.dockerfile
+        push: true
+        tags: workshoporange/aio-advanced-task-drupal-db-cleaner:nuke-latest 
+        
     
-    - name: Build the drupclean_report image
-      run: docker build . --file drupclean_report.dockerfile --tag aio-advancedtask-drupclean-report:$(date +%s)
+#    - name: Build the drupclean_report image
+#      run: docker build . --file drupclean_report.dockerfile --tag aio-advancedtask-drupclean:report-$(date +%s)
     
-    - name: Build the drupclean_nuke image
-      run: docker build . --file drupclean_nuke.dockerfile --tag aio-advancedtask-drupclean-nuke:$(date +%s)
+#    - name: Build the drupclean_nuke image
+#      run: docker build . --file drupclean_nuke.dockerfile --tag aio-advancedtask-drupclean:nuke-$(date +%s)
