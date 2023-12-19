@@ -1,12 +1,5 @@
 FROM uselagoon/lagoon-cli:latest as LAGOONCLI
-FROM amazeeio/php:8.2-cli
-
-#######################################################
-# Install PHP extensions
-#######################################################
-RUN docker-php-ext-install pcntl
-RUN docker-php-ext-install posix
-RUN docker-php-ext-install exif
+FROM amazeeio/advanced-task-toolbox:latest
 
 #######################################################
 # Install Laoon Tools Globally
@@ -17,8 +10,8 @@ RUN DOWNLOAD_PATH=$(curl -sL "https://api.github.com/repos/uselagoon/lagoon-sync
 #######################################################
 # Copy files, and run installs for composer and yarn
 #######################################################
-COPY . /app
-#RUN COMPOSER_MEMORY_LIMIT=-1 composer install --no-interaction --prefer-dist --optimize-autoloader
+COPY scripts /app
+COPY src /app
 
 #######################################################
 # Setup environment 

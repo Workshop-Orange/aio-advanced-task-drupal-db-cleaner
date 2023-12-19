@@ -1,18 +1,19 @@
 version: '2.3'
 
 services:
-  # SERVICE: cli
-  cli:
+  # SERVICE: drupclean
+  drupclean:
     networks:
       - amazeeio-network
       - default
     build:
       context: .
-      dockerfile: lagoon/cli.dockerfile
-    image: &cli-image adv-task-cli 
+      dockerfile: lagoon/drupclean.dockerfile
+    image: &cli-image drupclean
     labels:
       lagoon.type: cli
-      lagoon.name: cli
+      lagoon.name: drupclean
+      lagoon.persistent: /app/files
       lagoon.persistent.name: nginx
     volumes:
       - ./:/app:delegated
