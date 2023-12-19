@@ -10,4 +10,4 @@ steps:
   - name: run drush command
     type: exec
     deployment: cli
-    command: "drush src /tmp/drupclean/drupclean_report.php"
+    command: "drush scr /tmp/drupclean/drupclean_report.php"
