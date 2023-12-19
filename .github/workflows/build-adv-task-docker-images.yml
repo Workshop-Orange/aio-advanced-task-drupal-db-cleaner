@@ -12,7 +12,15 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
+
+    - name: Log in to Docker Hub
+      uses: docker/login-action@v1
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_PASSWORD }}
+    
     - name: Build the drupclean_report image
       run: docker build . --file drupclean_report.dockerfile --tag aio-advancedtask-drupclean-report:$(date +%s)
+    
     - name: Build the drupclean_nuke image
       run: docker build . --file drupclean_nuke.dockerfile --tag aio-advancedtask-drupclean-nuke:$(date +%s)
