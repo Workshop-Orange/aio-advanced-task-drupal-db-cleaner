@@ -1,0 +1,18 @@
+name: Docker Image CI
+
+on:
+  push:
+    branches: [ "main" ]
+#  pull_request:
+#    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Build the drupclean_report image
+      run: docker build . --file drupclean_report.dockerfile --tag aio-advancedtask-drupclean-report:$(date +%s)
+    - name: Build the drupclean_nuke image
+      run: docker build . --file drupclean_nuke.dockerfile --tag aio-advancedtask-drupclean-nuke:$(date +%s)
