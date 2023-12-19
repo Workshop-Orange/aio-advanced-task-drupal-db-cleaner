@@ -1,24 +1,23 @@
 version: '2.3'
 
 services:
-  # SERVICE: drupclean
-  drupclean:
+  # SERVICE: report
+  report:
     networks:
       - amazeeio-network
       - default
     build:
       context: .
-      dockerfile: lagoon/drupclean.dockerfile
-    image: &cli-image drupclean
-    labels:
-      lagoon.type: cli
-      lagoon.name: drupclean
-      lagoon.persistent: /app/files
-      lagoon.persistent.name: nginx
-    volumes:
-      - ./:/app:delegated
-    volumes_from: 
-      - container:amazeeio-ssh-agent
+      dockerfile: drupclean_report.dockerfile
+
+  # SERVICE: nuke
+  nuke:
+    networks:
+      - amazeeio-network
+      - default
+    build:
+      context: .
+      dockerfile: drupclean_nuke.dockerfile
 
 networks:
   amazeeio-network:
