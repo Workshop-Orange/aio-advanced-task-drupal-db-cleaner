@@ -3,7 +3,7 @@ FROM amazeeio/advanced-task-toolbox:latest
 #######################################################
 # Copy and set Lagoon Advanced Task script file
 #######################################################
-COPY scripts/nuke.yaml /app/scripts/default.yaml
+COPY scripts/report.yaml /app/scripts/default.yaml
 
 #######################################################
 # Copy drush src files for use with drush scr
