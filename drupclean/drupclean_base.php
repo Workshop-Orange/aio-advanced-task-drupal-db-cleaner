@@ -39,7 +39,7 @@ function locateNukeableTables()
 	$query = "SELECT table_name 
 	FROM information_schema.tables 
 	WHERE table_schema = '{$database_name}' 	
-	AND cast(table_name as BINARY) RLIKE 'tmp_.*';
+	AND (table_name RLIKE '^tmp_.*' or table_name RLIKE '^old_.*');
 	";
 
 	$result = $database->query($query);
@@ -47,10 +47,15 @@ function locateNukeableTables()
 	// Iterate through the result set and output the user id and name.
 	foreach ($result as $record) {
 		$matches = FALSE;
+
 		if(preg_match('/^tmp_[a-zA-Z0-9]{6}group/',$record->table_name)) {
 			$matches = TRUE;
 		}
 		
+		if(preg_match('/^old_[a-zA-Z0-9]{6}group/',$record->table_name)) {
+			$matches = TRUE;
+		}
+
 		// TODO: Add other matching cases here
 
 		if($matches) {
@@ -116,10 +121,10 @@ function locateAndNukeNukeableTables()
 	
 	$nuked = [];
 	foreach($nukeables as $nukeable) {
-		$query = "DROP TABLE " . $database_name . "." . $nukeable;
-		echo "Will run: " . $query . PHP_EOL;
+		$query = "DROP TABLE " . $databadrop . "." . $nukeable;
+		echo "Would run: " . $query . PHP_EOL;
 		# Unhash this when we are sure everything is working
-		# $database->query($query);
+		#$database->query($query);
 		$nuked[] = $nukeable;
 	}
 
