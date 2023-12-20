@@ -121,10 +121,10 @@ function locateAndNukeNukeableTables()
 	
 	$nuked = [];
 	foreach($nukeables as $nukeable) {
-		$query = "DROP TABLE " . $databadrop . "." . $nukeable;
+		$query = "DROP TABLE " . $database_name . "." . $nukeable;
 		echo "Would run: " . $query . PHP_EOL;
 		# Unhash this when we are sure everything is working
-		#$database->query($query);
+		$database->query($query);
 		$nuked[] = $nukeable;
 	}
 
