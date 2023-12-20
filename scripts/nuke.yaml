@@ -2,7 +2,7 @@ prerequisites:
   - name: Check that the environment variable confirmation is correct
     type: exec
     local: true
-    command: /app/drupclean/precheck_nuke.sh
+    command: /app/drupclean/precheck_nuke.sh "{{ DRUPCLEAN_NUKE_CONFIRM }}"
 steps:
   - name: Scale up cli deployment
     type: scale
