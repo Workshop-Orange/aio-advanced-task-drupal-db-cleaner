@@ -1,5 +1,9 @@
 #!/bin/sh
 
+export
+
+echo "DRUPCLEAN_NUKE_CONFIRM: $DRUPCLEAN_NUKE_CONFIRM"
+
 if [ "$DRUPCLEAN_NUKE_CONFIRM" = "I UNDERSTAND" ]; then 
   echo "Confirmed: You provided the required confirmation string";
   exit 0;
