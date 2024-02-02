@@ -32,3 +32,5 @@ When the code is pushed to Github, and action runs which will
 ## Creating the Advanced Task in Lagoon
 The relevant GraphQL template for the two Advanced Tasks are available in `create_task_*.gql`. Please note that these queries need at least the `project: ` id to be set correctly. This could be changed to `environment: ` if needed, or could be added to a whole group. Please see the Lagoon docs (http://docs.lagoon.sh) for more details on Advanced Tasks.
 
+## Helpful
+ - https://x-team.com/blog/drupal-field-name/
