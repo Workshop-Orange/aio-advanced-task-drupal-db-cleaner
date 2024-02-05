@@ -8,24 +8,52 @@ class RoboFile extends \Robo\Tasks
     private $lagoonSshHost = "ssh.lagoon.amazeeio.cloud";
     private $lagoonSshUser = "lagoon";
     private $lagoonToken;
+    private $reportId;
+    private $reportDirBase = "reports/";
+    private $reportDir;
 
     public function lagoonTaskBulkExecReport($projectListFile = "project-list.csv") 
     {
         try {
             $this->validateProjectList($projectListFile);
             $this->initGraphqlClient();
-            $projectList = $this->getProjectList($projectListFile);
-            
-            foreach($projectList as $projectEnvironment) {
-                $taskInstanceResult = $this->kickoffTaskAndWaitNuke($projectEnvironment["project"], $projectEnvironment["environment"]);
-                $this->say("Task nuke run complete for Project=".$projectEnvironment["project"]." Environment=".$projectEnvironment["environment"]);
-                $this->io()->newLine();
-            }
+            $this->initReportResult();
+            $this->say("Report directory results initialized: " . $this->reportDir);
 
         } catch(Exception $ex) {
             $this->io()->error($ex->getMessage());
             return 255;
         }
+
+        $projectList = $this->getProjectList($projectListFile);
+            
+        foreach($projectList as $projectEnvironment) {
+            try {
+                $taskInstanceResult = $this->kickoffTaskAndWaitReport($projectEnvironment["project"], $projectEnvironment["environment"]);
+                $this->logTaskResultReport(
+                    $projectEnvironment["project"] ?? "", 
+                    $projectEnvironment["environment"] ?? "",
+                    $taskInstanceResult["taskInstanceId"] ?? "", 
+                    $taskInstanceResult["taskInstanceStatus"] ?? "", 
+                    $taskInstanceResult["nukeables"] ?? "", 
+                    $taskInstanceResult["noteables"] ?? "", 
+                    $taskInstanceResult["logUrl"] ?? "");
+                    
+                $this->say("Task nuke run complete for Project=".$projectEnvironment["project"]." Environment=".$projectEnvironment["environment"]);
+                $this->io()->newLine();
+
+            } catch (Exception $ex) {
+                $this->logTaskResultReport(
+                    $projectEnvironment["project"] ?? "", 
+                    $projectEnvironment["environment"] ?? "",
+                    0, 
+                    $ex->getMessage(), 
+                    "", 
+                    "", 
+                    "");
+            }
+        }
+
     }
 
     public function lagoonTaskBulkExecNuke($projectListFile = "project-list.csv") 
@@ -33,18 +61,102 @@ class RoboFile extends \Robo\Tasks
         try {
             $this->validateProjectList($projectListFile);
             $this->initGraphqlClient();
-            $projectList = $this->getProjectList($projectListFile);
-            
-            foreach($projectList as $projectEnvironment) {
-                $taskInstanceResult = $this->kickoffTaskAndWaitReport($projectEnvironment["project"], $projectEnvironment["environment"]);
-                $this->say("Task report run complete for Project=".$projectEnvironment["project"]." Environment=".$projectEnvironment["environment"]);
-                $this->io()->newLine();
-            }
-
+            $this->initNukeResult();
+            $this->say("Nuke directory results initialized: " . $this->reportDir);
         } catch(Exception $ex) {
             $this->io()->error($ex->getMessage());
             return 255;
         }
+
+        $projectList = $this->getProjectList($projectListFile);
+            
+        foreach($projectList as $projectEnvironment) {
+            try {
+                $taskInstanceResult = $this->kickoffTaskAndWaitNuke($projectEnvironment["project"], $projectEnvironment["environment"]);
+                $this->logTaskResultNuke(
+                    $projectEnvironment["project"] ?? "", 
+                    $projectEnvironment["environment"] ?? "",
+                    $taskInstanceResult["taskInstanceId"] ?? "", 
+                    $taskInstanceResult["taskInstanceStatus"] ?? "", 
+                    $taskInstanceResult["nukeables"] ?? "", 
+                    $taskInstanceResult["logUrl"] ?? "");
+                    
+                $this->say("Task nuke run complete for Project=".$projectEnvironment["project"]." Environment=".$projectEnvironment["environment"]);
+                $this->io()->newLine();
+
+            } catch (Exception $ex) {
+                $this->logTaskResultNuke(
+                    $projectEnvironment["project"] ?? "", 
+                    $projectEnvironment["environment"] ?? "",
+                    0, 
+                    $ex->getMessage(), 
+                    "", 
+                    "");
+            }
+        }
+
+    }
+
+    private function initReportResult()
+    {
+        $this->reportId = date('Y-m-d_H-i-s') . "-" . uniqid();
+        $this->reportDir = $this->reportDirBase . $this->reportId;
+        if(! is_dir($this->reportDir)) {
+            mkdir($this->reportDir);
+        }
+
+        file_put_contents($this->reportDir . "/results.csv", implode(",", [
+            "project",
+            "environment",
+            "task_instance_id",
+            "task_status_id",
+            "nukeables",
+            "noteables",
+            "log_url"      
+        ]). PHP_EOL);
+    }
+    
+    private function initNukeResult()
+    {
+        $this->reportId = date('Y-m-d_H-i-s') . "-" . uniqid();
+        $this->reportDir = $this->reportDirBase . $this->reportId;
+        if(! is_dir($this->reportDir)) {
+            mkdir($this->reportDir);
+        }
+
+        file_put_contents($this->reportDir . "/results.csv", implode(",", [
+            "project",
+            "environment",
+            "task_instance_id",
+            "task_status_id",
+            "nukeables",
+            "log_url"      
+        ]). PHP_EOL);
+    }
+
+    private function logTaskResultReport($project, $environment, $taskInstanceId, $taskInstanceStatus, $nukeables, $noteables, $logUrl) 
+    {
+        file_put_contents($this->reportDir . "/results.csv", implode(",", [
+            $project,
+            $environment,
+            $taskInstanceId,
+            $taskInstanceStatus,
+            $nukeables,
+            $noteables,
+            $logUrl      
+        ]) . PHP_EOL, FILE_APPEND);
+    }
+
+    private function logTaskResultNuke($project, $environment, $taskInstanceId, $taskInstanceStatus, $nukeables, $logUrl) 
+    {
+        file_put_contents($this->reportDir . "/results.csv", implode(",", [
+            $project,
+            $environment,
+            $taskInstanceId,
+            $taskInstanceStatus,
+            $nukeables,
+            $logUrl      
+        ]) . PHP_EOL, FILE_APPEND);
     }
 
     private function kickoffTaskAndWaitReport($project, $environment)
@@ -72,7 +184,7 @@ class RoboFile extends \Robo\Tasks
         $taskInstanceStatus = $this->getTaskInstanceStatus($taskInstanceId);
         while(! in_array($taskInstanceStatus, ["complete", "cancelled","failed"])) {
             $this->say("Task status: " . $taskInstanceStatus);
-            sleep(5);
+            sleep(3);
             $taskInstanceStatus = $this->getTaskInstanceStatus($taskInstanceId);
         }
 
@@ -141,7 +253,7 @@ class RoboFile extends \Robo\Tasks
         $ret = [
             "taskInstanceId" => $taskInstanceId,
             "taskInstanceStatus" => $taskInstanceStatus,
-            "nukeables_nuked" => $nukeables,
+            "nukeables_nuked" => $nukeablesNuked,
             "logUrl" => $logUrl
         ];
 
