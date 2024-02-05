@@ -28,7 +28,8 @@ services:
       context: .
       dockerfile: drupclean_cli.dockerfile
     volumes:
-      - ./cli:/app
+      # - ./cli:/app
+      - ./reports:/app/reports
     volumes_from: 
       - container:amazeeio-ssh-agent 
 

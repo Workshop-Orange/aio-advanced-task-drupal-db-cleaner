@@ -5,4 +5,4 @@ COPY cli/* /app/
 
 COPY --from=LAGOONCLI /lagoon /usr/local/bin/lagoon
 
-# RUN COMPOSER_MEMORY_LIMIT=-1 composer install --no-dev
+RUN COMPOSER_MEMORY_LIMIT=-1 composer install --no-dev
