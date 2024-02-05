@@ -62,6 +62,8 @@ function getDatabaseAnalysis()
 {
 	$nukeables = locateNukeableTables();
 	$noteables = [];
+	$noteables['stats']['is_entity_mapped'] = 0;
+	$noteables['stats']['is_not_entity_mapped'] = 0;
 	
 	// Get the default database connection.
 	$database = \Drupal::database();
@@ -106,24 +108,30 @@ function getDatabaseAnalysis()
 			$subQueryRows = "select count(*) from " . $record->table_name;
 			$subQuerySize = "SELECT ROUND((DATA_LENGTH + INDEX_LENGTH) / 1024 / 1024) AS `size` FROM information_schema.tables where TABLE_NAME='".$record->table_name."'";
 			
-			$noteables[$record->table_name][$noteable] = [
+			$noteables['tables'][$record->table_name][$noteable] = [
 				'type' => $type,
 				'subtype' => $subtype,
 				//'rows' => $database->query($subQueryRows)->fetchField(),
 				//'size_mb' => $database->query($subQuerySize)->fetchField(),
 			];
 
+			$isEntityMapped = FALSE;
 			if($type == 'entity') {
 			     if($entity_type_manager->hasDefinition($subtype)) {
-				$table_mapping = $entity_type_manager->getStorage($subtype)->getTableMapping();
-				$table_names = $table_mapping->getDedicatedTableNames();
-			        $noteables[$record->table_name][$noteable]['entity_table_mapped'] = in_array($record->table_name, $table_names);
+					$table_mapping = $entity_type_manager->getStorage($subtype)->getTableMapping();
+					$table_names = $table_mapping->getDedicatedTableNames();
+			        $isEntityMapped = in_array($record->table_name, $table_names);
+					$noteables['tables'][$record->table_name][$noteable]['entity_table_mapped'] = $isEntityMapped;
 			     } else {
-			        $noteables[$record->table_name][$noteable]['entity_table_mapped'] = '__not_an_entity__';
+			        $noteables['tables'][$record->table_name][$noteable]['entity_table_mapped'] = '__not_an_entity__';
 			     }
 			}
 
-
+			if($isEntityMapped) {
+				$noteables['stats']['is_entity_mapped']++;
+			} else {
+				$noteables['stats']['is_not_entity_mapped']++;
+			}
 		}
 
 	}
