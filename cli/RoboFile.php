@@ -9,7 +9,26 @@ class RoboFile extends \Robo\Tasks
     private $lagoonSshUser = "lagoon";
     private $lagoonToken;
 
-    public function lagoonTaskBulkExecReport($projectListFile = "project-list.json") 
+    public function lagoonTaskBulkExecReport($projectListFile = "project-list.csv") 
+    {
+        try {
+            $this->validateProjectList($projectListFile);
+            $this->initGraphqlClient();
+            $projectList = $this->getProjectList($projectListFile);
+            
+            foreach($projectList as $projectEnvironment) {
+                $taskInstanceResult = $this->kickoffTaskAndWaitNuke($projectEnvironment["project"], $projectEnvironment["environment"]);
+                $this->say("Task nuke run complete for Project=".$projectEnvironment["project"]." Environment=".$projectEnvironment["environment"]);
+                $this->io()->newLine();
+            }
+
+        } catch(Exception $ex) {
+            $this->io()->error($ex->getMessage());
+            return 255;
+        }
+    }
+
+    public function lagoonTaskBulkExecNuke($projectListFile = "project-list.csv") 
     {
         try {
             $this->validateProjectList($projectListFile);
@@ -18,7 +37,7 @@ class RoboFile extends \Robo\Tasks
             
             foreach($projectList as $projectEnvironment) {
                 $taskInstanceResult = $this->kickoffTaskAndWaitReport($projectEnvironment["project"], $projectEnvironment["environment"]);
-                $this->say("Task run complete for Project=".$projectEnvironment["project"]." Environment=".$projectEnvironment["environment"]);
+                $this->say("Task report run complete for Project=".$projectEnvironment["project"]." Environment=".$projectEnvironment["environment"]);
                 $this->io()->newLine();
             }
 
@@ -81,6 +100,71 @@ class RoboFile extends \Robo\Tasks
             ["Logs URL" => $ret["logUrl"]],
         );
         
+        return $ret;
+    }
+
+    private function kickoffTaskAndWaitNuke($project, $environment)
+    {
+        $this->io()->title('Project: ' . $project . " | Environment: " . $environment);
+        $this->say("Looking up Environment and Task IDs for Project=" . $project . " Environment=" . $environment);
+        
+        $envId = $this->getEnvironmentIdForProjectEnvironment($project, $environment);
+        $this->say("Environment ID: " . $envId);
+        
+        $taskId = $this->findAdvancedTaskIdForEnvironment($envId, "Drupclean: Nuke - BEWARE");
+        $this->say("Task ID: " . $taskId);
+
+        if(empty($envId) || empty($taskId)) {
+            throw new Exception("Error triggering nuke task (".$taskId.") on Project=" . $project . " Environment=" . $environment . " (".$envId.")");
+        }
+
+        $this->say("Triggering nuke task (".$taskId.") on Project=" . $project . " Environment=" . $environment . " (".$envId.")");
+        
+        $taskInstanceId = $this->kickoffTaskNuke($envId, $taskId);
+        $this->say("Task triggered: " . $taskInstanceId);
+
+        sleep(5);
+
+        $taskInstanceStatus = $this->getTaskInstanceStatus($taskInstanceId);
+        while(! in_array($taskInstanceStatus, ["complete", "cancelled","failed"])) {
+            $this->say("Task status: " . $taskInstanceStatus);
+            sleep(5);
+            $taskInstanceStatus = $this->getTaskInstanceStatus($taskInstanceId);
+        }
+
+        sleep(5);
+        $logs = $this->getTaskInstanceLogs($taskInstanceId);
+        
+        $logUrl = $this->getReportUrlFromLogs($logs);
+        $nukeablesNuked = $this->getNukeablesNukedFromLogs($logs);
+
+        $ret = [
+            "taskInstanceId" => $taskInstanceId,
+            "taskInstanceStatus" => $taskInstanceStatus,
+            "nukeables_nuked" => $nukeables,
+            "logUrl" => $logUrl
+        ];
+
+        $this->io()->definitionList(
+            "Task Result",
+            ["Task Instance ID" => $ret["taskInstanceId"]],
+            ["Task Instance Status" => $ret["taskInstanceStatus"]],
+            ["Nukeables Nuked" => $ret["nukeables_nuked"]],
+            ["Logs URL" => $ret["logUrl"]],
+        );
+        
+        return $ret;
+    }
+
+    /**
+     * Nukeables nuked: 1021
+     */
+    private function getNukeablesNukedFromLogs($logs) {
+        $ret = "";
+        if(preg_match("/Nukeables nuked: (.*)/", $logs, $logMatch)) {
+            $ret = isset($logMatch[1]) ? $logMatch[1] : "";
+        }
+
         return $ret;
     }
 
@@ -228,6 +312,40 @@ class RoboFile extends \Robo\Tasks
     }
 
     private function kickoffTaskReport($envId, $taskId) 
+    {
+        if(empty($this->lagoonToken) || empty($this->graphqlClient)) {
+            throw new Exception("Lagoon api communication error");
+        }
+
+        $query = "
+            mutation m {
+                invokeRegisteredTask(advancedTaskDefinition: ".$taskId.", environment: ".$envId.")
+                {
+                id
+                }
+            }
+        ";
+
+        $response = $this->graphqlClient->query($query);
+
+        if($response->hasErrors()) {
+            throw new Exception("Lagoon API communication error looking up environment id for Environment=".$envId." Task=".$taskId);
+        }
+        else {
+            // Returns an array with all the data returned by the GraphQL server.
+            $data = $response->getData();
+            if(!isset($data["invokeRegisteredTask"]["id"])) 
+            {
+                throw new Exception("Could not invoke Task=".$taskId." on Environment=".$envId);
+            }
+            
+            return $data["invokeRegisteredTask"]["id"];
+        }
+
+        throw new Exception("Could not invoke Task=".$taskId." on Environment=".$envId);
+    }
+
+    private function kickoffTaskNuke($envId, $taskId) 
     {
         if(empty($this->lagoonToken) || empty($this->graphqlClient)) {
             throw new Exception("Lagoon api communication error");
