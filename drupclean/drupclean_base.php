@@ -1,6 +1,8 @@
 <?php
 
 use Drupal\Core\File\FileSystemInterface;
+use Drupal\Core\StreamWrapper\PublicStream;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 
 function sayHello()
 {
@@ -208,8 +210,7 @@ function storeDrupcleanReport($list, $type='unknown')
 	$directory = $public_files_directory . '/drupclean/';
 	$destination = $directory . $filename;
 	$uri = "public://drupclean/" . $filename;
-	$url = file_create_url($uri);
-
+	$url = getenv('LAGOON_ROUTE') . "/" . "drupclean/" . $filename;
 
 	// Ensure the directory exists.
 	$filesystem->prepareDirectory($directory, FileSystemInterface::CREATE_DIRECTORY);
