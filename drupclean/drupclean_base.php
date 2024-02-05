@@ -105,11 +105,12 @@ function getDatabaseAnalysis()
 		if($noteable) {
 			$subQueryRows = "select count(*) from " . $record->table_name;
 			$subQuerySize = "SELECT ROUND((DATA_LENGTH + INDEX_LENGTH) / 1024 / 1024) AS `size` FROM information_schema.tables where TABLE_NAME='".$record->table_name."'";
+			
 			$noteables[$record->table_name][$noteable] = [
 				'type' => $type,
 				'subtype' => $subtype,
-				'rows' => $database->query($subQueryRows)->fetchField(),
-				'size_mb' => $database->query($subQuerySize)->fetchField(),
+				//'rows' => $database->query($subQueryRows)->fetchField(),
+				//'size_mb' => $database->query($subQuerySize)->fetchField(),
 			];
 
 			if($type == 'entity') {

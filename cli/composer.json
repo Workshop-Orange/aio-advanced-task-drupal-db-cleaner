@@ -1,0 +1,6 @@
+{
+    "require": {
+        "consolidation/robo": "^3",
+        "softonic/graphql-client": "^2.2"
+    }
+}

@@ -18,6 +18,19 @@ services:
     build:
       context: .
       dockerfile: drupclean_nuke.dockerfile
+  
+  # SERVICE: nuke
+  cli:
+    networks:
+      - amazeeio-network
+      - default
+    build:
+      context: .
+      dockerfile: drupclean_cli.dockerfile
+    volumes:
+      - ./cli:/app
+    volumes_from: 
+      - container:amazeeio-ssh-agent 
 
 networks:
   amazeeio-network:
