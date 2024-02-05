@@ -15,10 +15,13 @@ class RoboFile extends \Robo\Tasks
             $this->validateProjectList($projectListFile);
             $this->initGraphqlClient();
             $projectList = $this->getProjectList($projectListFile);
+            
             foreach($projectList as $projectEnvironment) {
-                $taskInstanceStatus = $this->kickoffTaskAndWaitReport($projectEnvironment["project"], $projectEnvironment["environment"]);
+                $taskInstanceResult = $this->kickoffTaskAndWaitReport($projectEnvironment["project"], $projectEnvironment["environment"]);
                 $this->say("Task run complete for Project=".$projectEnvironment["project"]." Environment=".$projectEnvironment["environment"]);
+                $this->io()->newLine();
             }
+
         } catch(Exception $ex) {
             $this->io()->error($ex->getMessage());
             return 255;
@@ -27,6 +30,7 @@ class RoboFile extends \Robo\Tasks
 
     private function kickoffTaskAndWaitReport($project, $environment)
     {
+        $this->io()->title('Project: ' . $project . " | Environment: " . $environment);
         $this->say("Looking up Environment and Task IDs for Project=" . $project . " Environment=" . $environment);
         
         $envId = $this->getEnvironmentIdForProjectEnvironment($project, $environment);
@@ -60,7 +64,24 @@ class RoboFile extends \Robo\Tasks
         $nukeables = $this->getNukeablesFromLogs($logs);
         $noteables = $this->getNostablesFromLogs($logs);
 
-        $this->say("Nukeables: " . $nukeables. " Noteables: " .$noteables . " Logs: ". $logUrl);
+        $ret = [
+            "taskInstanceId" => $taskInstanceId,
+            "taskInstanceStatus" => $taskInstanceStatus,
+            "nukeables" => $nukeables,
+            "noteables" => $noteables,
+            "logUrl" => $logUrl
+        ];
+
+        $this->io()->definitionList(
+            "Task Result",
+            ["Task Instance ID" => $ret["taskInstanceId"]],
+            ["Task Instance Status" => $ret["taskInstanceStatus"]],
+            ["Nukeables" => $ret["nukeables"]],
+            ["Noteables" => $ret["noteables"]],
+            ["Logs URL" => $ret["logUrl"]],
+        );
+        
+        return $ret;
     }
 
     /**
