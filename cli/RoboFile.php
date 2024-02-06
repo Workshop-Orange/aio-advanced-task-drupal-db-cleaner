@@ -12,7 +12,7 @@ class RoboFile extends \Robo\Tasks
     private $reportDirBase = "reports/";
     private $reportDir;
 
-    public function lagoonTaskBulkExecReport($projectListFile = "project-list.csv") 
+    public function lagoonTaskBulkExecReport($projectListFile = "project-list.csv", $opts = ['generate-nuke-project-list' => false]) 
     {
         try {
             $this->validateProjectList($projectListFile);
@@ -26,7 +26,9 @@ class RoboFile extends \Robo\Tasks
         }
 
         $projectList = $this->getProjectList($projectListFile);
-            
+
+        $nukeList = [];
+        
         foreach($projectList as $projectEnvironment) {
             try {
                 $taskInstanceResult = $this->kickoffTaskAndWaitReport($projectEnvironment["project"], $projectEnvironment["environment"]);
@@ -42,6 +44,12 @@ class RoboFile extends \Robo\Tasks
                 $this->say("Task nuke run complete for Project=".$projectEnvironment["project"]." Environment=".$projectEnvironment["environment"]);
                 $this->io()->newLine();
 
+                if ($opts['generate-nuke-project-list']) {
+                    if($taskInstanceResult['nukeables'] ?? 0 > 0) {
+                        $nukeList[$projectEnvironment["project"]][$projectEnvironment["environment"]] = TRUE;
+                    }
+                }
+
             } catch (Exception $ex) {
                 $this->logTaskResultReport(
                     $projectEnvironment["project"] ?? "", 
@@ -54,6 +62,16 @@ class RoboFile extends \Robo\Tasks
             }
         }
 
+        if($opts['generate-nuke-project-list'] && count($nukeList)) {
+            $outfile = $this->reportDir . "/nuke-project-list.csv";
+            foreach($nukeList as $project => $environments) {
+                foreach($environments as $environment => $addIt) {
+                    file_put_contents($outfile, $project . "," . $environment . PHP_EOL, FILE_APPEND);
+                }
+            }
+
+            $this->say("The projects that can be nuked are listed in: " . $outfile);
+        }
     }
 
     public function lagoonTaskBulkExecNuke($projectListFile = "project-list.csv") 
@@ -99,7 +117,7 @@ class RoboFile extends \Robo\Tasks
 
     private function initReportResult()
     {
-        $this->reportId = date('Y-m-d_H-i-s') . "-" . uniqid();
+        $this->reportId = date('Y-m-d_H-i-s') . "-report-" . uniqid();
         $this->reportDir = $this->reportDirBase . $this->reportId;
         if(! is_dir($this->reportDir)) {
             mkdir($this->reportDir);
@@ -118,7 +136,7 @@ class RoboFile extends \Robo\Tasks
     
     private function initNukeResult()
     {
-        $this->reportId = date('Y-m-d_H-i-s') . "-" . uniqid();
+        $this->reportId = date('Y-m-d_H-i-s') . "-nuke-" . uniqid();
         $this->reportDir = $this->reportDirBase . $this->reportId;
         if(! is_dir($this->reportDir)) {
             mkdir($this->reportDir);
@@ -465,9 +483,15 @@ class RoboFile extends \Robo\Tasks
 
         $query = "
             mutation m {
-                invokeRegisteredTask(advancedTaskDefinition: ".$taskId.", environment: ".$envId.")
+                invokeRegisteredTask(advancedTaskDefinition: ".$taskId.", 
+                    environment: ".$envId.",
+                    argumentValues: {
+                        advancedTaskDefinitionArgumentName: \"DRUPCLEAN_NUKE_CONFIRM\", 
+                        value: \"I UNDERSTAND\"
+                    }
+                )
                 {
-                id
+                    id
                 }
             }
         ";
