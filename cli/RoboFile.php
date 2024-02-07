@@ -12,6 +12,35 @@ class RoboFile extends \Robo\Tasks
     private $reportDirBase = "reports/";
     private $reportDir;
 
+    public function lagoonGetAllProjectsAndEnvironmentsInGroupsToCsv($groups)
+    {
+        try {
+            $this->initGraphqlClient();
+            $this->initReportResult();
+            $this->say("Report directory results initialized: " . $this->reportDir);
+
+        } catch(Exception $ex) {
+            $this->io()->error($ex->getMessage());
+            return 255;
+        }
+
+        $grpArr = [];
+        if(preg_match("/,/", $groups)) {
+            $grpArr = explode(",", $groups);
+        } else {
+            $grpArr[] = $groups;
+        }
+
+        foreach($grpArr as $group) {
+            $projects = $this->getLagoonProjectsAndEnvironmentsForGroup(trim($group));
+            foreach($projects as $project) {
+              file_put_contents($this->reportDir . "/project-list.csv", implode(",", $project) . PHP_EOL, FILE_APPEND);
+            }
+        }
+
+        $this->say("Your project list is available at: " . $this->reportDir. "/project-list.csv");
+    }
+
     public function lagoonTaskBulkExecReport($projectListFile = "project-list.csv", $opts = ['generate-nuke-project-list' => false]) 
     {
         try {
@@ -113,6 +142,52 @@ class RoboFile extends \Robo\Tasks
             }
         }
 
+    }
+
+    private function getLagoonProjectsAndEnvironmentsForGroup($groupName)
+    {
+        if(empty($this->lagoonToken) || empty($this->graphqlClient)) {
+            throw new Exception("Lagoon api communication error");
+        }
+
+        $query = "
+            query q {
+                allProjectsInGroup(input: {name: \"".$groupName."\"}){
+                    name
+                    environments {
+                      name
+                    }
+                } 
+            }
+        ";
+
+        $returnData = [];
+        $response = $this->graphqlClient->query($query);
+
+        if($response->hasErrors()) {
+            throw new Exception("Lagoon API communication error looking up projects for group=".$group);
+        }
+        else {
+            // Returns an array with all the data returned by the GraphQL server.
+            $data = $response->getData();
+            if(!isset($data["allProjectsInGroup"]) || !is_array($data["allProjectsInGroup"])) 
+            {
+                throw new Exception("Lagoon API communication error looking up projects for group=".$group);
+            }
+            
+            foreach($data["allProjectsInGroup"] as $project) {
+                foreach($project["environments"] as $environment) {
+                    $returnData[]  = [
+                        $project["name"],
+                        $environment["name"]
+                    ];
+                }
+            }
+
+            return $returnData;
+        }
+
+        throw new Exception("Lagoon API communication error looking up projects for group=".$group);
     }
 
     private function initReportResult()
