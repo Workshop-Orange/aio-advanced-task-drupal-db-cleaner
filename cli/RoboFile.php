@@ -58,8 +58,15 @@ class RoboFile extends \Robo\Tasks
 
         $nukeList = [];
         
+        $starting = time();
+        $this->say("Starting a report on " . count($projectList) . " projects");
+        $tot = count($projectList);
+        $cnt = 0;
         foreach($projectList as $projectEnvironment) {
+            $age = time() - $starting;
+            $cnt++;
             try {
+                $this->say("Project ". $cnt . " of " . $tot . " (total runtime " . $age . " seconds)"); 
                 $taskInstanceResult = $this->kickoffTaskAndWaitReport($projectEnvironment["project"], $projectEnvironment["environment"]);
                 $this->logTaskResultReport(
                     $projectEnvironment["project"] ?? "", 
@@ -120,9 +127,15 @@ class RoboFile extends \Robo\Tasks
         }
 
         $projectList = $this->getProjectList($projectListFile);
-            
+        $starting = time();
+        $this->say("Starting a report on " . count($projectList) . " projects");
+        $tot = count($projectList);
+        $cnt = 0;
         foreach($projectList as $projectEnvironment) {
+            $age = time() - $starting;
+            $cnt++;
             try {
+                $this->say("Project ". $cnt . " of " . $tot . " (total runtime " . $age . " seconds)"); 
                 $taskInstanceResult = $this->kickoffTaskAndWaitNuke($projectEnvironment["project"], $projectEnvironment["environment"]);
                 $this->logTaskResultNuke(
                     $projectEnvironment["project"] ?? "", 
@@ -233,7 +246,7 @@ class RoboFile extends \Robo\Tasks
         ]). PHP_EOL);
     }
 
-    private function logTaskResultReport($project, $environment, $taskInstanceId, $taskInstanceStatus, $nukeables, $noteables, $logUrl) 
+    private function logTaskResultReport($project, $environment, $taskInstanceId, $taskInstanceStatus, $nukeables, $noteables, $noteables_mapped, $noteables_not_mapped, $logUrl) 
     {
         file_put_contents($this->reportDir . "/results.csv", implode(",", [
             $project,
@@ -242,6 +255,8 @@ class RoboFile extends \Robo\Tasks
             $taskInstanceStatus,
             $nukeables,
             $noteables,
+            $noteables_mapped,
+            $noteables_not_mapped,
             $logUrl      
         ]) . PHP_EOL, FILE_APPEND);
     }
@@ -400,7 +415,7 @@ class RoboFile extends \Robo\Tasks
 
     private function getNoteablesEntityMappedFromLogs($logs) {
         $ret = "";
-        if(preg_match("/is_entity_mapped.*> (\d+)$/", $logs, $logMatch)) {
+        if(preg_match("/is_entity_mapped.*(\d+)/", $logs, $logMatch)) {
             $ret = isset($logMatch[1]) ? $logMatch[1] : "";
         }
 
@@ -409,7 +424,7 @@ class RoboFile extends \Robo\Tasks
 
     private function getNoteablesNotEntityMappedFromLogs($logs) {
         $ret = "";
-        if(preg_match("/is_not_entity_mapped.*> (\d+)$/", $logs, $logMatch)) {
+        if(preg_match("/is_not_entity_mapped.*(\d+)/", $logs, $logMatch)) {
             $ret = isset($logMatch[1]) ? $logMatch[1] : "";
         }
 
