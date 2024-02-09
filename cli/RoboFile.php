@@ -281,7 +281,13 @@ class RoboFile extends \Robo\Tasks
         sleep(5);
 
         $taskInstanceStatus = $this->getTaskInstanceStatus($taskInstanceId);
+        $start = now();
         while(! in_array($taskInstanceStatus, ["complete", "cancelled","failed"])) {
+            $age = now() - $start;
+            if($age > (60*15)) {
+                throw new Exception("Timeout reached after " . $age . " seconds.");
+            }
+
             $this->say("Task status: " . $taskInstanceStatus);
             sleep(3);
             $taskInstanceStatus = $this->getTaskInstanceStatus($taskInstanceId);
@@ -342,7 +348,13 @@ class RoboFile extends \Robo\Tasks
         sleep(5);
 
         $taskInstanceStatus = $this->getTaskInstanceStatus($taskInstanceId);
+        $start = now();
         while(! in_array($taskInstanceStatus, ["complete", "cancelled","failed"])) {
+            $age = now() - $start;
+            if($age > (60*15)) {
+                throw new Exception("Timeout reached after " . $age . " seconds.");
+            }
+
             $this->say("Task status: " . $taskInstanceStatus);
             sleep(5);
             $taskInstanceStatus = $this->getTaskInstanceStatus($taskInstanceId);
