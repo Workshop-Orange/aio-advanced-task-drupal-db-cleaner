@@ -29,25 +29,7 @@ echo PHP_EOL;
 
 echo "Report File in storage: " . $results['destination'] . PHP_EOL;
 echo "Report URL: " . $results['url'] . PHP_EOL;
-echo PHP_EOL;
-
-
-/** 
-echo "====================================" . PHP_EOL;
-echo "Below is the list of Nukeable tables found" . PHP_EOL;
-echo "====================================" . PHP_EOL;
-foreach($results['list']['nukeable'] as $tbl) {
-    echo ' - ' . $tbl . PHP_EOL;
-}
 
 echo PHP_EOL;
-
-echo "====================================" . PHP_EOL;
-echo "Below is the list of Noteable tables found" . PHP_EOL;
-echo "====================================" . PHP_EOL;
-foreach($results['list']['noteables']['tables'] as $tbl) {
-    echo ' - ' . $tbl . PHP_EOL;
-}
-*/
 
 echo PHP_EOL;

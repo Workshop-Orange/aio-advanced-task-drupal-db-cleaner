@@ -68,6 +68,8 @@ class RoboFile extends \Robo\Tasks
                     $taskInstanceResult["taskInstanceStatus"] ?? "", 
                     $taskInstanceResult["nukeables"] ?? "", 
                     $taskInstanceResult["noteables"] ?? "", 
+                    $taskInstanceResult["noteables_entity_mapped"] ?? "", 
+                    $taskInstanceResult["noteables_not_entity_mapped"] ?? "", 
                     $taskInstanceResult["logUrl"] ?? "");
                     
                 $this->say("Task nuke run complete for Project=".$projectEnvironment["project"]." Environment=".$projectEnvironment["environment"]);
@@ -85,6 +87,8 @@ class RoboFile extends \Robo\Tasks
                     $projectEnvironment["environment"] ?? "",
                     0, 
                     $ex->getMessage(), 
+                    "", 
+                    "", 
                     "", 
                     "", 
                     "");
@@ -205,6 +209,8 @@ class RoboFile extends \Robo\Tasks
             "task_status_id",
             "nukeables",
             "noteables",
+            "noteables_entity_mapped",
+            "noteables_not_entity_mapped",
             "log_url"      
         ]). PHP_EOL);
     }
@@ -286,13 +292,18 @@ class RoboFile extends \Robo\Tasks
         
         $logUrl = $this->getReportUrlFromLogs($logs);
         $nukeables = $this->getNukeablesFromLogs($logs);
-        $noteables = $this->getNostablesFromLogs($logs);
+        $noteables = $this->getNoteablesFromLogs($logs);
+        $noteablesEntityMapped = $this->getNoteablesEntityMappedFromLogs($logs);
+        $noteablesNotEntityMapped = $this->getNoteablesNotEntityMappedFromLogs($logs);
+        
 
         $ret = [
             "taskInstanceId" => $taskInstanceId,
             "taskInstanceStatus" => $taskInstanceStatus,
             "nukeables" => $nukeables,
             "noteables" => $noteables,
+            "noteables_entity_mapped" => $noteablesEntityMapped,
+            "noteables_not_entity_mapped" => $noteablesNotEntityMapped,
             "logUrl" => $logUrl
         ];
 
@@ -373,6 +384,24 @@ class RoboFile extends \Robo\Tasks
         return $ret;
     }
 
+    private function getNoteablesEntityMappedFromLogs($logs) {
+        $ret = "";
+        if(preg_match("/is_entity_mapped.*> (\d+)$/", $logs, $logMatch)) {
+            $ret = isset($logMatch[1]) ? $logMatch[1] : "";
+        }
+
+        return $ret;
+    }
+
+    private function getNoteablesNotEntityMappedFromLogs($logs) {
+        $ret = "";
+        if(preg_match("/is_not_entity_mapped.*> (\d+)$/", $logs, $logMatch)) {
+            $ret = isset($logMatch[1]) ? $logMatch[1] : "";
+        }
+
+        return $ret;
+    }
+
     /**
      * Nukeables found: 1021
      */
@@ -388,7 +417,7 @@ class RoboFile extends \Robo\Tasks
     /**
      * Noteables found: 13
      */
-    private function getNostablesFromLogs($logs) {
+    private function getNoteablesFromLogs($logs) {
         $ret = "";
         if(preg_match("/Noteables found: (.*)/", $logs, $logMatch)) {
             $ret = isset($logMatch[1]) ? $logMatch[1] : "";
