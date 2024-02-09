@@ -319,7 +319,9 @@ class RoboFile extends \Robo\Tasks
             ["Task Instance Status" => $ret["taskInstanceStatus"]],
             ["Nukeables" => $ret["nukeables"]],
             ["Noteables" => $ret["noteables"]],
-            ["Logs URL" => $ret["logUrl"]],
+            ["Noteables Entity Mapped" => $ret["noteables_entity_mapped"]],
+            ["Noteables Not Entity Mapped" => $ret["noteables_not_entity_mapped"]],
+            ["Logs URL" => $ret["logUrl"]]
         );
         
         return $ret;
