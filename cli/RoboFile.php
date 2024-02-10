@@ -11,7 +11,10 @@ class RoboFile extends \Robo\Tasks
     private $reportId;
     private $reportDirBase = "reports/";
     private $reportDir;
-
+    
+    private $lagoonTokenRefreshSec =  60 * 30; // 30 minutes
+    private $lagoonTokenBirth = 0;
+    
     public function lagoonGetAllProjectsAndEnvironmentsInGroupsToCsv($groups)
     {
         try {
@@ -41,7 +44,10 @@ class RoboFile extends \Robo\Tasks
         $this->say("Your project list is available at: " . $this->reportDir. "/project-list.csv");
     }
 
-    public function lagoonTaskBulkExecReport($projectListFile = "project-list.csv", $opts = ['generate-nuke-project-list' => false]) 
+    public function lagoonTaskBulkExecReport($projectListFile = "project-list.csv", $opts = [
+            'generate-nuke-project-list' => false,
+            'start-at' => 1,
+        ]) 
     {
         try {
             $this->validateProjectList($projectListFile);
@@ -65,8 +71,17 @@ class RoboFile extends \Robo\Tasks
         foreach($projectList as $projectEnvironment) {
             $age = time() - $starting;
             $cnt++;
+
+            if($cnt < $opts['start-at']) {
+                $this->say("Skipping project " . $cnt . " to start at " . $opts['start-at']);
+                continue;
+            }
+
             try {
+                $this->io()->title('Project: ' . $projectEnvironment["project"] . " | Environment: " . $projectEnvironment["environment"]);
                 $this->say("Project ". $cnt . " of " . $tot . " (total runtime " . $age . " seconds)"); 
+                $this->getLagoonToken();
+
                 $taskInstanceResult = $this->kickoffTaskAndWaitReport($projectEnvironment["project"], $projectEnvironment["environment"]);
                 $this->logTaskResultReport(
                     $projectEnvironment["project"] ?? "", 
@@ -135,7 +150,10 @@ class RoboFile extends \Robo\Tasks
             $age = time() - $starting;
             $cnt++;
             try {
+                $this->io()->title('Project: ' . $projectEnvironment["project"] . " | Environment: " . $projectEnvironment["environment"]);
                 $this->say("Project ". $cnt . " of " . $tot . " (total runtime " . $age . " seconds)"); 
+                $this->getLagoonToken();
+
                 $taskInstanceResult = $this->kickoffTaskAndWaitNuke($projectEnvironment["project"], $projectEnvironment["environment"]);
                 $this->logTaskResultNuke(
                     $projectEnvironment["project"] ?? "", 
@@ -275,7 +293,6 @@ class RoboFile extends \Robo\Tasks
 
     private function kickoffTaskAndWaitReport($project, $environment)
     {
-        $this->io()->title('Project: ' . $project . " | Environment: " . $environment);
         $this->say("Looking up Environment and Task IDs for Project=" . $project . " Environment=" . $environment);
         
         $envId = $this->getEnvironmentIdForProjectEnvironment($project, $environment);
@@ -344,7 +361,6 @@ class RoboFile extends \Robo\Tasks
 
     private function kickoffTaskAndWaitNuke($project, $environment)
     {
-        $this->io()->title('Project: ' . $project . " | Environment: " . $environment);
         $this->say("Looking up Environment and Task IDs for Project=" . $project . " Environment=" . $environment);
         
         $envId = $this->getEnvironmentIdForProjectEnvironment($project, $environment);
@@ -723,7 +739,7 @@ class RoboFile extends \Robo\Tasks
 
     private function initGraphqlClient()
     {
-        $this->getLagoonToken();
+        $this->getLagoonToken(TRUE);
 
         if(empty($this->lagoonToken)) {
             $this->io()->error("Could not get a Lagoon token");
@@ -742,14 +758,28 @@ class RoboFile extends \Robo\Tasks
         }
     }
 
-    private function getLagoonToken() {
-        $result = $this->taskSshExec($this->lagoonSshHost, $this->lagoonSshUser)
-        ->port($this->lagoonSshPort)
-        ->printOutput(FALSE)
-        ->exec('token')
-        ->run();
+    private function getLagoonToken($force = FALSE) 
+    {
+        $lagoonTokenAge = time() - $this->lagoonTokenBirth;
+        if(! empty($this->lagoonToken)) {
+            $this->say("Lagoon token is " . $lagoonTokenAge . " secs old");
+        }
 
-        $this->lagoonToken = $result->getMessage();
+        if(empty($this->lagoonToken) || $force == TRUE ||  $lagoonTokenAge >= $this->lagoonTokenRefreshSec)
+        {
+            $this->say("Lagoon token being fetched");
+            $result = $this->taskSshExec($this->lagoonSshHost, $this->lagoonSshUser)
+            ->port($this->lagoonSshPort)
+            ->printOutput(FALSE)
+            ->exec('token')
+            ->run();
+
+            $this->lagoonToken = $result->getMessage();
+            $this->lagoonTokenBirth = time();
+        } else {
+            $this->say("Lagoon token is set, force is not set, and is fresh");
+        }
+
         return $this->lagoonToken;
     }
 
