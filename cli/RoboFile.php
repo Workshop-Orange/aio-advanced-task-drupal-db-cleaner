@@ -129,7 +129,9 @@ class RoboFile extends \Robo\Tasks
         }
     }
 
-    public function lagoonTaskBulkExecNuke($projectListFile = "project-list.csv") 
+    public function lagoonTaskBulkExecNuke($projectListFile = "project-list.csv", $opts = [
+        'start-at' => 1
+    ]) 
     {
         try {
             $this->validateProjectList($projectListFile);
@@ -149,6 +151,12 @@ class RoboFile extends \Robo\Tasks
         foreach($projectList as $projectEnvironment) {
             $age = time() - $starting;
             $cnt++;
+
+            if($cnt < $opts['start-at']) {
+                $this->say("Skipping project " . $cnt . " to start at " . $opts['start-at']);
+                continue;
+            }
+
             try {
                 $this->io()->title('Project: ' . $projectEnvironment["project"] . " | Environment: " . $projectEnvironment["environment"]);
                 $this->say("Project ". $cnt . " of " . $tot . " (total runtime " . $age . " seconds)"); 
