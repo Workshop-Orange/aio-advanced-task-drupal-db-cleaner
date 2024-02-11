@@ -8,12 +8,15 @@ class RoboFile extends \Robo\Tasks
     private $lagoonSshHost = "ssh.lagoon.amazeeio.cloud";
     private $lagoonSshUser = "lagoon";
     private $lagoonToken;
+    private $lagoonTokenBirth = 0;
+
     private $reportId;
     private $reportDirBase = "reports/";
     private $reportDir;
-    
+
     private $lagoonTokenRefreshSec =  60 * 30; // 30 minutes
-    private $lagoonTokenBirth = 0;
+    private $standardSleepTime = 3; // three seconds
+    private $maxTaskRuntime = 60*15; // 15 minutes
     
     public function lagoonGetAllProjectsAndEnvironmentsInGroupsToCsv($groups)
     {
@@ -80,7 +83,7 @@ class RoboFile extends \Robo\Tasks
             try {
                 $this->io()->title('Project: ' . $projectEnvironment["project"] . " | Environment: " . $projectEnvironment["environment"]);
                 $this->say("Project ". $cnt . " of " . $tot . " (total runtime " . $age . " seconds)"); 
-                $this->getLagoonToken();
+                $this->checkLagoonConnection();
 
                 $taskInstanceResult = $this->kickoffTaskAndWaitReport($projectEnvironment["project"], $projectEnvironment["environment"]);
                 $this->logTaskResultReport(
@@ -104,6 +107,8 @@ class RoboFile extends \Robo\Tasks
                 }
 
             } catch (Exception $ex) {
+                $this->say("Runtime exception: " . $ex->getMessage());
+
                 $this->logTaskResultReport(
                     $projectEnvironment["project"] ?? "", 
                     $projectEnvironment["environment"] ?? "",
@@ -160,7 +165,8 @@ class RoboFile extends \Robo\Tasks
             try {
                 $this->io()->title('Project: ' . $projectEnvironment["project"] . " | Environment: " . $projectEnvironment["environment"]);
                 $this->say("Project ". $cnt . " of " . $tot . " (total runtime " . $age . " seconds)"); 
-                $this->getLagoonToken();
+                $this->checkLagoonConnection();
+
 
                 $taskInstanceResult = $this->kickoffTaskAndWaitNuke($projectEnvironment["project"], $projectEnvironment["environment"]);
                 $this->logTaskResultNuke(
@@ -175,6 +181,8 @@ class RoboFile extends \Robo\Tasks
                 $this->io()->newLine();
 
             } catch (Exception $ex) {
+                $this->say("Runtime exception: " . $ex->getMessage());
+
                 $this->logTaskResultNuke(
                     $projectEnvironment["project"] ?? "", 
                     $projectEnvironment["environment"] ?? "",
@@ -318,22 +326,24 @@ class RoboFile extends \Robo\Tasks
         $taskInstanceId = $this->kickoffTaskReport($envId, $taskId);
         $this->say("Task triggered: " . $taskInstanceId);
 
-        sleep(5);
+        sleep($this->standardSleepTime);
 
         $taskInstanceStatus = $this->getTaskInstanceStatus($taskInstanceId);
         $start = time();
         while(! in_array($taskInstanceStatus, ["complete", "cancelled","failed"])) {
             $age = time() - $start;
-            if($age > (60*15)) {
+            if($age > ($this->maxTaskRuntime)) {
                 throw new Exception("Timeout reached after " . $age . " seconds.");
             }
 
             $this->say("Task status: " . $taskInstanceStatus);
-            sleep(3);
+            sleep($this->standardSleepTime);
+
             $taskInstanceStatus = $this->getTaskInstanceStatus($taskInstanceId);
         }
 
-        sleep(5);
+        sleep($this->standardSleepTime);
+
         $logs = $this->getTaskInstanceLogs($taskInstanceId);
         
         $logUrl = $this->getReportUrlFromLogs($logs);
@@ -386,22 +396,26 @@ class RoboFile extends \Robo\Tasks
         $taskInstanceId = $this->kickoffTaskNuke($envId, $taskId);
         $this->say("Task triggered: " . $taskInstanceId);
 
-        sleep(5);
+        sleep($this->standardSleepTime);
+
 
         $taskInstanceStatus = $this->getTaskInstanceStatus($taskInstanceId);
         $start = time();
         while(! in_array($taskInstanceStatus, ["complete", "cancelled","failed"])) {
             $age = time() - $start;
-            if($age > (60*15)) {
+            if($age > ($this->maxTaskRuntime)) {
                 throw new Exception("Timeout reached after " . $age . " seconds.");
             }
 
             $this->say("Task status: " . $taskInstanceStatus);
-            sleep(5);
+
+            sleep($this->standardSleepTime);
+
             $taskInstanceStatus = $this->getTaskInstanceStatus($taskInstanceId);
         }
 
-        sleep(5);
+        sleep($this->standardSleepTime);
+
         $logs = $this->getTaskInstanceLogs($taskInstanceId);
         
         $logUrl = $this->getReportUrlFromLogs($logs);
@@ -768,12 +782,7 @@ class RoboFile extends \Robo\Tasks
 
     private function getLagoonToken($force = FALSE) 
     {
-        $lagoonTokenAge = time() - $this->lagoonTokenBirth;
-        if(! empty($this->lagoonToken)) {
-            $this->say("Lagoon token is " . $lagoonTokenAge . " secs old");
-        }
-
-        if(empty($this->lagoonToken) || $force == TRUE ||  $lagoonTokenAge >= $this->lagoonTokenRefreshSec)
+        if(empty($this->lagoonToken) || $force == TRUE)
         {
             $this->say("Lagoon token being fetched");
             $result = $this->taskSshExec($this->lagoonSshHost, $this->lagoonSshUser)
@@ -784,12 +793,26 @@ class RoboFile extends \Robo\Tasks
 
             $this->lagoonToken = $result->getMessage();
             $this->lagoonTokenBirth = time();
-        } else {
-            $this->say("Lagoon token is set, force is not set, and is fresh");
         }
 
         return $this->lagoonToken;
     }
+
+    private function checkLagoonConnection() 
+    {
+        $lagoonTokenAge = time() - $this->lagoonTokenBirth;
+
+        if(! empty($this->lagoonToken)) {
+            $this->say("Lagoon token is " . $lagoonTokenAge . " secs old");
+        }
+        
+        if(empty($this->lagoonToken) ||  $lagoonTokenAge >= $this->lagoonTokenRefreshSec) {
+            $this->say("Reinitializing Lagoon API connection");
+            $this->initGraphqlClient();
+        }
+        
+    }
+    
 
     private function validateProjectList($projectListFile) {
         if(!file_exists($projectListFile)) {
