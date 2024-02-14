@@ -243,10 +243,12 @@ function locateAndNukeNukeableTables()
 	
 	$nuked = [];
 	foreach($nukeables as $nukeable) {
-		$query = "DROP TABLE `" . $database_name . "`." . $nukeable;
-		echo "Dryrun Mode - Would run: " . $query . PHP_EOL;
-		# Unhash this when we are sure everything is working
-		# $database->query($query);
+		if(! empty($database) && ! empty($nukeable)) {
+			# echo "Dryrun Mode - Would run: " . $query . PHP_EOL;
+			$query = "DROP TABLE `" . $database_name . "`." . $nukeable;
+			$database->query($query);
+		}
+
 		$nuked[] = $nukeable;
 	}
 
