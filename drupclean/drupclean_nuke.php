@@ -8,7 +8,7 @@ echo "==================================================================" . PHP_
 echo "* Nukeable tables are the tables which match the _tmp or _old pattern" . PHP_EOL;
 echo "* and have be automatically nuked by this Drupclean Nuke job." . PHP_EOL;
 echo "==================================================================" . PHP_EOL;
-echo "Nukeables found: ". count($results['list'] ?? []) . PHP_EOL;
+echo "Nukeables nuked: ". count($results['list'] ?? []) . PHP_EOL;
 echo PHP_EOL;
 
 
